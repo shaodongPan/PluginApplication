@@ -5,45 +5,52 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
+import android.util.Log;
 
 import java.io.File;
 import java.lang.reflect.Method;
 
 import dalvik.system.DexClassLoader;
 
-public class PlugnManager {
+public class PluginManager {
 
     private Context mContext;
 
-    private static PlugnManager instance;
+    public static PluginManager instance;
 
-    public PluginApk getPlugnApk() {
-        return plugnApk;
+    public PluginApk getPluginApk() {
+        return pluginApk;
     }
 
-    private PluginApk plugnApk;
+    private PluginApk pluginApk;
 
-    public static PlugnManager getInstance() {
+    public static PluginManager getInstance() {
         if (instance == null) {
-            return new PlugnManager();
+            instance = new PluginManager();
         }
         return instance;
     }
 
     public void init(Context context) {
-        mContext = context;
+        this.mContext = context;
     }
 
     /**
      * 加载apk
      */
     public void loadApk(String apkPath) {
-        PackageInfo packageInfo = createPackageInfo(apkPath);
-        DexClassLoader loader = createClassLoader(apkPath);
+        PackageInfo packageInfo = mContext.getPackageManager().getPackageArchiveInfo(apkPath,
+                PackageManager.GET_ACTIVITIES | PackageManager.GET_SERVICES);
+
+        if (packageInfo == null) {
+            Log.e("PluginManager", "loadApk: 加载插件apk失败");
+            return;
+        }
+        DexClassLoader loader = createDexClassLoader(apkPath);
         AssetManager assetManager = createAssetManager(apkPath);
         Resources resources = createResources(assetManager);
 
-        plugnApk = new PluginApk(packageInfo, loader, resources);
+        pluginApk = new PluginApk(packageInfo, loader, resources);
     }
 
     private Resources createResources(AssetManager assetManager) {
@@ -64,15 +71,9 @@ public class PlugnManager {
         return null;
     }
 
-    private DexClassLoader createClassLoader(String apkPath) {
-        File file = mContext.getDir(apkPath, Context.MODE_PRIVATE);
-        return new DexClassLoader("dex", file.getAbsolutePath()
-                , null, mContext.getClassLoader());
-    }
-
-    private PackageInfo createPackageInfo(String apkPath) {
-        PackageInfo packageInfo = mContext.getPackageManager().getPackageArchiveInfo(apkPath,
-                PackageManager.GET_ACTIVITIES | PackageManager.GET_SERVICES);
-        return packageInfo;
+    //创建访问插件apk的DexClassLoader对象加载插件代码
+    private DexClassLoader createDexClassLoader(String apkPath) {
+        File file = mContext.getDir("dex", Context.MODE_PRIVATE);
+        return new DexClassLoader(apkPath, file.getAbsolutePath(), null, mContext.getClassLoader());
     }
 }

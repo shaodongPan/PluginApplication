@@ -18,7 +18,6 @@ public class PluginActivity extends Activity implements IPlugin {
 
         if (FROM == FROM_IN) {
             super.onCreate(onSaveInstanceState);
-            proxyActivity = this;
         }
     }
 
